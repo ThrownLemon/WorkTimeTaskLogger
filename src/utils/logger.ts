@@ -116,8 +116,8 @@ function log(
   const formatted = formatMessage(message, level, options);
   const colored = colorize(formatted, level);
 
-  // Use stderr for errors, stdout for everything else
-  if (level === "error") {
+  // Use stderr for errors and warnings, stdout for everything else
+  if (level === "error" || level === "warning") {
     console.error(colored);
   } else {
     console.log(colored);
