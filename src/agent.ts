@@ -5,6 +5,7 @@
 
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { loadConfig } from "./config/settings.ts";
+import { logger } from "./utils/logger.ts";
 import type {
   TaskAnalysis,
   WorkCategory,
@@ -159,7 +160,7 @@ async function analyzeTaskWithProxy(
 
       return parseAnalysisResult(result, windowInfo, appCategory);
     } catch (error) {
-      console.warn("Vision analysis failed, falling back to text:", error);
+      logger.warning(`Vision analysis failed, falling back to text: ${error}`);
       // Fall through to text-only analysis
     }
   }
@@ -226,7 +227,7 @@ async function analyzeTaskWithClaudeSDK(
 
     return parseAnalysisResult(result, windowInfo, appCategory);
   } catch (error) {
-    console.error("Error analyzing task with Claude SDK:", error);
+    logger.error(`Error analyzing task with Claude SDK: ${error}`);
     return createFallbackAnalysis(windowInfo, appCategory);
   }
 }
@@ -259,7 +260,7 @@ function parseAnalysisResult(
       };
     }
   } catch (error) {
-    console.warn("Failed to parse analysis result:", error);
+    logger.warning(`Failed to parse analysis result: ${error}`);
   }
 
   return createFallbackAnalysis(windowInfo, appCategory);
@@ -286,7 +287,7 @@ export async function analyzeTask(
         screenshotPath
       );
     } catch (error) {
-      console.error("Proxy analysis failed:", error);
+      logger.error(`Proxy analysis failed: ${error}`);
       return createFallbackAnalysis(windowInfo, appCategory);
     }
   } else {
@@ -443,7 +444,7 @@ Provide a 2-3 sentence summary suitable for a timesheet submission.`;
       return result || "Weekly summary generation failed.";
     }
   } catch (error) {
-    console.error("Error generating weekly summary:", error);
+    logger.error(`Error generating weekly summary: ${error}`);
     return `Worked ${weekData.totalHours.toFixed(1)} hours across ${weekData.projectBreakdown.length} projects.`;
   }
 }
