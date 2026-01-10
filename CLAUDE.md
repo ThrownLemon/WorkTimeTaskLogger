@@ -50,3 +50,39 @@ Screenshot and window detection use native macOS commands (not npm packages):
 - `TimeEntry`: A captured time entry with screenshot, window info, AI analysis
 - `TaskAnalysis`: Result from AI categorization (taskDescription, suggestedProjectId, category, confidence)
 - `WorkCategory`: "coding" | "communication" | "research" | "documentation" | "meeting" | "design" | "admin" | "break" | "other"
+
+## Logging
+
+### Logger Utility (`src/utils/logger.ts`)
+**IMPORTANT**: Always use the colored logger instead of `console.log/error/warn`. The logger provides consistent, color-coded output throughout the CLI.
+
+**Usage:**
+```typescript
+import { logger } from "./utils/logger";
+
+logger.success("Operation completed");  // Green with ✓ prefix
+logger.error("Failed to process");      // Red with ✗ prefix
+logger.warning("Missing configuration"); // Yellow with ⚠ prefix
+logger.info("Status information");       // Cyan with ℹ prefix
+logger.plain("Regular text");            // White, no prefix
+```
+
+**Color Guidelines:**
+- **Green (success)**: Successful operations, confirmations, completions
+- **Red (error)**: Failures, errors, critical issues
+- **Yellow (warning)**: Warnings, skipped operations, idle detection, excluded apps
+- **Cyan (info)**: Status messages, section headers, informational output
+- **White (plain)**: Regular data output, help text, neutral messages
+
+**Features:**
+- Built on `picocolors` (lightweight ANSI color library)
+- Optional timestamps: `logger.success("Message", { timestamp: true })`
+- Optional prefix control: `logger.error("Message", { prefix: false })`
+- Consistent icon prefixes for visual hierarchy
+
+**When to use each level:**
+- Use `success()` for: tracker started/stopped, projects added/removed, configuration updated
+- Use `error()` for: capture failures, AI analysis errors, invalid commands, missing parameters
+- Use `warning()` for: idle detection, excluded apps, missing screenshots, degraded functionality
+- Use `info()` for: status displays, report headers, command help, informational messages
+- Use `plain()` for: data output, lists, neutral text without semantic meaning
