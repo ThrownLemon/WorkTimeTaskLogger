@@ -4,7 +4,7 @@
  */
 
 import type { TrackerConfig } from "../types.ts";
-import { logger } from "../utils/logger.ts";
+import { logger, formatError } from "../utils/logger.ts";
 
 export interface IdleState {
   /** Whether the user is currently idle */
@@ -51,7 +51,7 @@ async function getIdleTimeMacOS(): Promise<number> {
       return Math.floor(nanoseconds / 1_000_000_000);
     }
   } catch (error) {
-    logger.error(`Error getting macOS idle time: ${error}`);
+    logger.error(`Error getting macOS idle time: ${formatError(error)}`);
   }
 
   return 0;
@@ -120,7 +120,7 @@ async function getIdleTimeWindows(): Promise<number> {
       return seconds;
     }
   } catch (error) {
-    logger.error(`Error getting Windows idle time: ${error}`);
+    logger.error(`Error getting Windows idle time: ${formatError(error)}`);
   }
 
   return 0;

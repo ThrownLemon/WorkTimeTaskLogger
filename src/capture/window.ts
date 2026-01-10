@@ -4,7 +4,7 @@
  */
 
 import type { WindowInfo, TrackerConfig } from "../types.ts";
-import { logger } from "../utils/logger.ts";
+import { logger, formatError } from "../utils/logger.ts";
 
 /**
  * Get information about the currently active window using AppleScript
@@ -41,7 +41,7 @@ export async function getActiveWindow(): Promise<WindowInfo | null> {
       pid: parseInt(parts[3] ?? "0", 10),
     };
   } catch (error) {
-    logger.error(`Error getting active window: ${error}`);
+    logger.error(`Error getting active window: ${formatError(error)}`);
     return null;
   }
 }

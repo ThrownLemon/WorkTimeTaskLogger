@@ -7,6 +7,25 @@ import pc from "picocolors";
 /** Log level type */
 export type LogLevel = "success" | "error" | "warning" | "info" | "default";
 
+/**
+ * Safely extract error message from unknown error value
+ */
+export function formatError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.stack ?? error.message;
+  }
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
+
 /** Logger options */
 export interface LoggerOptions {
   /** Include timestamp in output (default: false) */
@@ -96,7 +115,13 @@ function log(
 ): void {
   const formatted = formatMessage(message, level, options);
   const colored = colorize(formatted, level);
-  console.log(colored);
+
+  // Use stderr for errors, stdout for everything else
+  if (level === "error") {
+    console.error(colored);
+  } else {
+    console.log(colored);
+  }
 }
 
 /**
@@ -137,7 +162,13 @@ export function plain(message: string, options?: LoggerOptions): void {
 /**
  * Create a logger instance with default options
  */
-export function createLogger(defaultOptions: LoggerOptions = {}) {
+export function createLogger(defaultOptions: LoggerOptions = {}): {
+  success: (message: string, options?: LoggerOptions) => void;
+  error: (message: string, options?: LoggerOptions) => void;
+  warning: (message: string, options?: LoggerOptions) => void;
+  info: (message: string, options?: LoggerOptions) => void;
+  plain: (message: string, options?: LoggerOptions) => void;
+} {
   return {
     success: (message: string, options?: LoggerOptions) =>
       success(message, { ...defaultOptions, ...options }),

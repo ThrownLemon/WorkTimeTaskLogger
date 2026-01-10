@@ -54,9 +54,11 @@ Screenshot and window detection use native macOS commands (not npm packages):
 ## Logging
 
 ### Logger Utility (`src/utils/logger.ts`)
+
 **IMPORTANT**: Always use the colored logger instead of `console.log/error/warn`. The logger provides consistent, color-coded output throughout the CLI.
 
 **Usage:**
+
 ```typescript
 import { logger } from "./utils/logger";
 

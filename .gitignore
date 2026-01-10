@@ -28,5 +28,8 @@ Thumbs.db
 # Logs
 *.log
 
-# Auto Claude data directory
+# Auto Claude data directory and generated files
 .auto-claude/
+.auto-claude-status
+.auto-claude-security.json
+.claude_settings.json

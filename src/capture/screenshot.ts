@@ -5,7 +5,7 @@
 
 import { join } from "path";
 import type { TrackerConfig } from "../types.ts";
-import { logger } from "../utils/logger.ts";
+import { logger, formatError } from "../utils/logger.ts";
 
 export interface ScreenshotResult {
   /** Path to the saved screenshot */
@@ -94,7 +94,7 @@ export async function cleanupOldScreenshots(
       }
     }
   } catch (error) {
-    logger.error(`Error cleaning up old screenshots: ${error}`);
+    logger.error(`Error cleaning up old screenshots: ${formatError(error)}`);
   }
 
   return deletedCount;
@@ -140,7 +140,7 @@ export async function getScreenshotsDirSize(
       }
     }
   } catch (error) {
-    logger.error(`Error calculating screenshots size: ${error}`);
+    logger.error(`Error calculating screenshots size: ${formatError(error)}`);
   }
 
   return totalSize;
