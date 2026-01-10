@@ -1,0 +1,25 @@
+{
+  "name": "worktimetasklogger",
+  "version": "1.0.0",
+  "description": "AI-powered time tracking agent with screenshot capture and task analysis",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun --watch src/index.ts",
+    "typecheck": "bunx tsc --noEmit",
+    "build": "bun build src/index.ts --outdir dist --target node",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^22.0.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "0.2.1"
+  }
+}

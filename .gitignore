@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Data directory (screenshots, database)
+data/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Build output
+dist/
+
+# Bun
+bun.lockb
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
