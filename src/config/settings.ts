@@ -38,7 +38,7 @@ export async function loadConfig(): Promise<TrackerConfig> {
       return { ...DEFAULT_CONFIG, ...data };
     }
   } catch (error) {
-    logger.error(`Error loading config, using defaults: ${formatError(error)}`);
+    logger.error(`Error loading config from ${CONFIG_FILE}, using defaults: ${formatError(error)}`);
   }
   return { ...DEFAULT_CONFIG };
 }

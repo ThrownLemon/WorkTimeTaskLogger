@@ -32,23 +32,51 @@ export interface LoggerOptions {
   timestamp?: boolean;
   /** Include log level prefix (default: true) */
   prefix?: boolean;
+  /** Use ASCII prefixes instead of Unicode symbols (default: false) */
+  useAscii?: boolean;
 }
 
 /**
- * Format a timestamp for logging
+ * Format a timestamp for logging with date and timezone
  */
 function formatTimestamp(): string {
   const now = new Date();
+  const year = now.getFullYear();
+  const month = (now.getMonth() + 1).toString().padStart(2, "0");
+  const day = now.getDate().toString().padStart(2, "0");
   const hours = now.getHours().toString().padStart(2, "0");
   const minutes = now.getMinutes().toString().padStart(2, "0");
   const seconds = now.getSeconds().toString().padStart(2, "0");
-  return `${hours}:${minutes}:${seconds}`;
+
+  // Get timezone offset in ±HH:MM format
+  const offset = -now.getTimezoneOffset();
+  const offsetSign = offset >= 0 ? "+" : "-";
+  const offsetHours = Math.floor(Math.abs(offset) / 60).toString().padStart(2, "0");
+  const offsetMinutes = (Math.abs(offset) % 60).toString().padStart(2, "0");
+  const timezone = `${offsetSign}${offsetHours}:${offsetMinutes}`;
+
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} ${timezone}`;
 }
 
 /**
  * Get the prefix for a log level
  */
-function getPrefix(level: LogLevel): string {
+function getPrefix(level: LogLevel, useAscii: boolean = false): string {
+  if (useAscii) {
+    switch (level) {
+      case "success":
+        return "[OK]";
+      case "error":
+        return "[ERR]";
+      case "warning":
+        return "[WARN]";
+      case "info":
+        return "[INFO]";
+      case "default":
+        return "";
+    }
+  }
+
   switch (level) {
     case "success":
       return "✓";
@@ -71,7 +99,7 @@ function formatMessage(
   level: LogLevel,
   options: LoggerOptions = {}
 ): string {
-  const { timestamp = false, prefix = true } = options;
+  const { timestamp = false, prefix = true, useAscii = false } = options;
   const parts: string[] = [];
 
   if (timestamp) {
@@ -79,7 +107,7 @@ function formatMessage(
   }
 
   if (prefix && level !== "default") {
-    parts.push(getPrefix(level));
+    parts.push(getPrefix(level, useAscii));
   }
 
   parts.push(message);
@@ -101,7 +129,7 @@ function colorize(message: string, level: LogLevel): string {
     case "info":
       return pc.cyan(message);
     case "default":
-      return pc.white(message);
+      return message; // No colorization for default level to respect terminal theme
   }
 }
 
@@ -159,16 +187,19 @@ export function plain(message: string, options?: LoggerOptions): void {
   log("default", message, options);
 }
 
-/**
- * Create a logger instance with default options
- */
-export function createLogger(defaultOptions: LoggerOptions = {}): {
+/** Logger instance type */
+export type Logger = {
   success: (message: string, options?: LoggerOptions) => void;
   error: (message: string, options?: LoggerOptions) => void;
   warning: (message: string, options?: LoggerOptions) => void;
   info: (message: string, options?: LoggerOptions) => void;
   plain: (message: string, options?: LoggerOptions) => void;
-} {
+};
+
+/**
+ * Create a logger instance with default options
+ */
+export function createLogger(defaultOptions: LoggerOptions = {}): Logger {
   return {
     success: (message: string, options?: LoggerOptions) =>
       success(message, { ...defaultOptions, ...options }),

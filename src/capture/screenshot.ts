@@ -94,7 +94,7 @@ export async function cleanupOldScreenshots(
       }
     }
   } catch (error) {
-    logger.error(`Error cleaning up old screenshots: ${formatError(error)}`);
+    logger.error(`Error cleaning up old screenshots (dir: ${screenshotDir}, retentionDays: ${retentionDays}): ${formatError(error)}`);
   }
 
   return deletedCount;
@@ -140,7 +140,7 @@ export async function getScreenshotsDirSize(
       }
     }
   } catch (error) {
-    logger.error(`Error calculating screenshots size: ${formatError(error)}`);
+    logger.error(`Error calculating screenshots size (dir: ${screenshotDir}): ${formatError(error)}`);
   }
 
   return totalSize;

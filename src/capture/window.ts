@@ -7,6 +7,21 @@ import type { WindowInfo, TrackerConfig } from "../types.ts";
 import { logger, formatError } from "../utils/logger.ts";
 
 /**
+ * Simple rate limiter to prevent log spam
+ */
+const rateLimitedWarnings = new Map<string, number>();
+
+function warnOnceOrRateLimit(message: string, windowMs: number = 60000): void {
+  const now = Date.now();
+  const lastWarned = rateLimitedWarnings.get(message);
+
+  if (!lastWarned || now - lastWarned > windowMs) {
+    logger.warning(message);
+    rateLimitedWarnings.set(message, now);
+  }
+}
+
+/**
  * Get information about the currently active window using AppleScript
  */
 export async function getActiveWindow(): Promise<WindowInfo | null> {
@@ -41,7 +56,7 @@ export async function getActiveWindow(): Promise<WindowInfo | null> {
       pid: parseInt(parts[3] ?? "0", 10),
     };
   } catch (error) {
-    logger.error(`Error getting active window: ${formatError(error)}`);
+    warnOnceOrRateLimit(`Error getting active window: ${formatError(error)}`);
     return null;
   }
 }

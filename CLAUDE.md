@@ -60,13 +60,13 @@ Screenshot and window detection use native macOS commands (not npm packages):
 **Usage:**
 
 ```typescript
-import { logger } from "./utils/logger";
+import { logger } from "../utils/logger.ts";
 
 logger.success("Operation completed");  // Green with ✓ prefix
 logger.error("Failed to process");      // Red with ✗ prefix
 logger.warning("Missing configuration"); // Yellow with ⚠ prefix
 logger.info("Status information");       // Cyan with ℹ prefix
-logger.plain("Regular text");            // White, no prefix
+logger.plain("Regular text");            // Default color, no prefix
 ```
 
 **Color Guidelines:**
@@ -74,13 +74,16 @@ logger.plain("Regular text");            // White, no prefix
 - **Red (error)**: Failures, errors, critical issues
 - **Yellow (warning)**: Warnings, skipped operations, idle detection, excluded apps
 - **Cyan (info)**: Status messages, section headers, informational output
-- **White (plain)**: Regular data output, help text, neutral messages
+- **Default (plain)**: Regular data output, help text, neutral messages (respects terminal theme)
 
 **Features:**
 - Built on `picocolors` (lightweight ANSI color library)
-- Optional timestamps: `logger.success("Message", { timestamp: true })`
+- Optional timestamps with date and timezone: `logger.success("Message", { timestamp: true })`
+  - Format: `YYYY-MM-DD HH:MM:SS ±HH:MM` (e.g., `2026-01-11 14:30:45 -08:00`)
 - Optional prefix control: `logger.error("Message", { prefix: false })`
-- Consistent icon prefixes for visual hierarchy
+- Consistent icon prefixes for visual hierarchy (Unicode by default)
+- ASCII fallback mode for older terminals: `logger.info("Message", { useAscii: true })`
+  - Unicode: `✓ ✗ ⚠ ℹ` → ASCII: `[OK] [ERR] [WARN] [INFO]`
 
 **When to use each level:**
 - Use `success()` for: tracker started/stopped, projects added/removed, configuration updated
