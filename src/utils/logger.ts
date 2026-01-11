@@ -92,30 +92,6 @@ function getPrefix(level: LogLevel, useAscii: boolean = false): string {
 }
 
 /**
- * Format a log message with optional timestamp and prefix
- */
-function formatMessage(
-  message: string,
-  level: LogLevel,
-  options: LoggerOptions = {}
-): string {
-  const { timestamp = false, prefix = true, useAscii = false } = options;
-  const parts: string[] = [];
-
-  if (timestamp) {
-    parts.push(pc.gray(`[${formatTimestamp()}]`));
-  }
-
-  if (prefix && level !== "default") {
-    parts.push(getPrefix(level, useAscii));
-  }
-
-  parts.push(message);
-
-  return parts.join(" ");
-}
-
-/**
  * Apply color based on log level
  */
 function colorize(message: string, level: LogLevel): string {
