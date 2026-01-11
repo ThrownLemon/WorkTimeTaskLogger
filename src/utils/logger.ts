@@ -218,7 +218,7 @@ export function createLogger(defaultOptions: LoggerOptions = {}): Logger {
 }
 
 // Default logger instance
-export const logger = {
+export const logger: Logger = {
   success,
   error,
   warning,
