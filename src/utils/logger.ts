@@ -23,7 +23,9 @@ function truncateError(str: string): string {
   if (str.length <= MAX_ERROR_LENGTH) {
     return str;
   }
-  return str.slice(0, MAX_ERROR_LENGTH) + "...";
+  const ellipsis = "...";
+  const available = Math.max(0, MAX_ERROR_LENGTH - ellipsis.length);
+  return str.slice(0, available) + ellipsis;
 }
 
 /**
@@ -44,7 +46,8 @@ export function formatError(error: unknown, options: FormatErrorOptions = {}): s
   }
 
   try {
-    return truncateError(JSON.stringify(error));
+    const result = JSON.stringify(error);
+    return truncateError(result !== undefined ? result : String(error));
   } catch {
     return truncateError(String(error));
   }
@@ -61,19 +64,10 @@ export interface LoggerOptions {
 }
 
 /**
- * Format a timestamp for logging with date and timezone
+ * Format a timestamp for logging (ISO 8601 format for consistency across machines)
  */
 function formatTimestamp(): string {
-  return new Date().toLocaleString(undefined, {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-    timeZoneName: "short",
-  });
+  return new Date().toISOString();
 }
 
 /** ASCII prefix map for older terminals */
