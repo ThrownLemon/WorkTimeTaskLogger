@@ -7,22 +7,46 @@ import pc from "picocolors";
 /** Log level type */
 export type LogLevel = "success" | "error" | "warning" | "info" | "default";
 
+/** Maximum length for error messages before truncation */
+const MAX_ERROR_LENGTH = 1000;
+
+/** Options for formatError */
+export interface FormatErrorOptions {
+  /** Include stack trace for Error objects (default: false) */
+  showStack?: boolean;
+}
+
+/**
+ * Truncate a string to MAX_ERROR_LENGTH with ellipsis if needed
+ */
+function truncateError(str: string): string {
+  if (str.length <= MAX_ERROR_LENGTH) {
+    return str;
+  }
+  return str.slice(0, MAX_ERROR_LENGTH) + "...";
+}
+
 /**
  * Safely extract error message from unknown error value
  */
-export function formatError(error: unknown): string {
+export function formatError(error: unknown, options: FormatErrorOptions = {}): string {
+  const { showStack = false } = options;
+
   if (error instanceof Error) {
-    return error.stack ?? error.message;
+    if (showStack && error.stack) {
+      return truncateError(error.stack);
+    }
+    return truncateError(error.message);
   }
 
   if (typeof error === "string") {
-    return error;
+    return truncateError(error);
   }
 
   try {
-    return JSON.stringify(error);
+    return truncateError(JSON.stringify(error));
   } catch {
-    return String(error);
+    return truncateError(String(error));
   }
 }
 
@@ -58,37 +82,30 @@ function formatTimestamp(): string {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} ${timezone}`;
 }
 
+/** ASCII prefix map for older terminals */
+const asciiPrefixMap: Record<LogLevel, string> = {
+  success: "[OK]",
+  error: "[ERR]",
+  warning: "[WARN]",
+  info: "[INFO]",
+  default: "",
+};
+
+/** Unicode prefix map for modern terminals */
+const unicodePrefixMap: Record<LogLevel, string> = {
+  success: "✓",
+  error: "✗",
+  warning: "⚠",
+  info: "ℹ",
+  default: "",
+};
+
 /**
  * Get the prefix for a log level
  */
 function getPrefix(level: LogLevel, useAscii: boolean = false): string {
-  if (useAscii) {
-    switch (level) {
-      case "success":
-        return "[OK]";
-      case "error":
-        return "[ERR]";
-      case "warning":
-        return "[WARN]";
-      case "info":
-        return "[INFO]";
-      case "default":
-        return "";
-    }
-  }
-
-  switch (level) {
-    case "success":
-      return "✓";
-    case "error":
-      return "✗";
-    case "warning":
-      return "⚠";
-    case "info":
-      return "ℹ";
-    case "default":
-      return "";
-  }
+  const prefixMap = useAscii ? asciiPrefixMap : unicodePrefixMap;
+  return prefixMap[level] ?? "";
 }
 
 /**
@@ -173,7 +190,7 @@ export function info(message: string, options?: LoggerOptions): void {
 }
 
 /**
- * Log a default message (white)
+ * Log a message with no colorization (respects terminal theme)
  */
 export function plain(message: string, options?: LoggerOptions): void {
   log("default", message, options);
