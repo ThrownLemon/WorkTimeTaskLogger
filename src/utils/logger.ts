@@ -64,22 +64,16 @@ export interface LoggerOptions {
  * Format a timestamp for logging with date and timezone
  */
 function formatTimestamp(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = (now.getMonth() + 1).toString().padStart(2, "0");
-  const day = now.getDate().toString().padStart(2, "0");
-  const hours = now.getHours().toString().padStart(2, "0");
-  const minutes = now.getMinutes().toString().padStart(2, "0");
-  const seconds = now.getSeconds().toString().padStart(2, "0");
-
-  // Get timezone offset in ±HH:MM format
-  const offset = -now.getTimezoneOffset();
-  const offsetSign = offset >= 0 ? "+" : "-";
-  const offsetHours = Math.floor(Math.abs(offset) / 60).toString().padStart(2, "0");
-  const offsetMinutes = (Math.abs(offset) % 60).toString().padStart(2, "0");
-  const timezone = `${offsetSign}${offsetHours}:${offsetMinutes}`;
-
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} ${timezone}`;
+  return new Date().toLocaleString(undefined, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+    timeZoneName: "short",
+  });
 }
 
 /** ASCII prefix map for older terminals */
