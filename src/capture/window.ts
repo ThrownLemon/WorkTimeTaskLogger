@@ -11,13 +11,17 @@ import { logger, formatError } from "../utils/logger.ts";
  */
 const rateLimitedWarnings = new Map<string, number>();
 
-function warnOnceOrRateLimit(message: string, windowMs: number = 60000): void {
+function warnOnceOrRateLimit(
+  message: string,
+  stableKey: string,
+  windowMs: number = 60000
+): void {
   const now = Date.now();
-  const lastWarned = rateLimitedWarnings.get(message);
+  const lastWarned = rateLimitedWarnings.get(stableKey);
 
   if (!lastWarned || now - lastWarned > windowMs) {
     logger.warning(message);
-    rateLimitedWarnings.set(message, now);
+    rateLimitedWarnings.set(stableKey, now);
   }
 }
 
@@ -56,7 +60,10 @@ export async function getActiveWindow(): Promise<WindowInfo | null> {
       pid: parseInt(parts[3] ?? "0", 10),
     };
   } catch (error) {
-    warnOnceOrRateLimit(`Error getting active window: ${formatError(error)}`);
+    warnOnceOrRateLimit(
+      `Error getting active window: ${formatError(error)}`,
+      "getActiveWindow"
+    );
     return null;
   }
 }
