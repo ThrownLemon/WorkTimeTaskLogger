@@ -230,6 +230,24 @@ export function getDailySummary(date: Date): DailySummary {
       appData.seconds += duration;
       appData.entries++;
       appMap.set(entry.appName, appData);
+
+      // Category breakdown (extract from AI analysis)
+      if (entry.aiAnalysis) {
+        try {
+          const analysis = JSON.parse(entry.aiAnalysis) as { category?: WorkCategory };
+          if (analysis.category) {
+            const categoryData = categoryMap.get(analysis.category) ?? {
+              seconds: 0,
+              entries: 0,
+            };
+            categoryData.seconds += duration;
+            categoryData.entries++;
+            categoryMap.set(analysis.category, categoryData);
+          }
+        } catch {
+          // Invalid JSON in aiAnalysis, skip category tracking for this entry
+        }
+      }
     }
   }
 
