@@ -10,6 +10,21 @@ import { logger, formatError } from "../utils/logger.ts";
  * Simple rate limiter to prevent log spam
  */
 const rateLimitedWarnings = new Map<string, number>();
+const CLEANUP_INTERVAL_MS = 300000; // Clean up every 5 minutes
+const MAX_ENTRY_AGE_MS = 3600000; // Remove entries older than 1 hour
+
+// Periodically clean up old entries to prevent memory leaks
+const cleanupInterval = setInterval(() => {
+  const now = Date.now();
+  for (const [key, timestamp] of rateLimitedWarnings.entries()) {
+    if (now - timestamp > MAX_ENTRY_AGE_MS) {
+      rateLimitedWarnings.delete(key);
+    }
+  }
+}, CLEANUP_INTERVAL_MS);
+
+// Ensure cleanup interval doesn't prevent process from exiting
+cleanupInterval.unref();
 
 function warnOnceOrRateLimit(
   message: string,

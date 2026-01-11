@@ -141,14 +141,30 @@ function log(
   message: string,
   options: LoggerOptions = {}
 ): void {
-  const formatted = formatMessage(message, level, options);
-  const colored = colorize(formatted, level);
+  const { timestamp = false, prefix = true, useAscii = false } = options;
+  const parts: string[] = [];
+
+  // Add timestamp first (before colorization to preserve gray color)
+  if (timestamp) {
+    parts.push(pc.gray(`[${formatTimestamp()}]`));
+  }
+
+  // Build and colorize the main message (prefix + message)
+  const mainParts: string[] = [];
+  if (prefix && level !== "default") {
+    mainParts.push(getPrefix(level, useAscii));
+  }
+  mainParts.push(message);
+  const mainMessage = colorize(mainParts.join(" "), level);
+  parts.push(mainMessage);
+
+  const output = parts.join(" ");
 
   // Use stderr for errors and warnings, stdout for everything else
   if (level === "error" || level === "warning") {
-    console.error(colored);
+    console.error(output);
   } else {
-    console.log(colored);
+    console.log(output);
   }
 }
 
