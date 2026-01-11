@@ -46,6 +46,7 @@ import {
   generateExportFilename,
 } from "./reports/export.ts";
 import type { TrackerConfig, Project, ExportFormat } from "./types.ts";
+import { logger } from "./utils/logger.ts";
 
 // CLI commands
 const COMMANDS = {
@@ -95,12 +96,12 @@ async function main(): Promise<void> {
         showHelp();
         break;
       default:
-        console.log(`Unknown command: ${command}`);
+        logger.error(`Unknown command: ${command}`);
         showHelp();
         process.exit(1);
     }
   } catch (error) {
-    console.error("Error:", error instanceof Error ? error.message : error);
+    logger.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
 }
@@ -109,7 +110,7 @@ async function main(): Promise<void> {
  * Start the time tracker
  */
 async function startTracker(): Promise<void> {
-  console.log("Starting WorkTimeTaskLogger...\n");
+  logger.info("Starting WorkTimeTaskLogger...\n");
 
   const config = await loadConfig();
   await ensureDirectories(config);
@@ -117,25 +118,25 @@ async function startTracker(): Promise<void> {
 
   // Check if already running
   if (config.isRunning) {
-    console.log("Tracker is already running.");
+    logger.warning("Tracker is already running.");
     return;
   }
 
   // Mark as running
   await updateConfig({ isRunning: true });
 
-  console.log(`Capture interval: ${config.captureIntervalMinutes} minutes`);
-  console.log(`Idle threshold: ${config.idleThresholdSeconds} seconds`);
-  console.log(`Screenshot blur: ${config.blurScreenshots ? "enabled" : "disabled"}`);
-  console.log(`Projects configured: ${config.projects.length}`);
-  console.log("");
+  logger.info(`Capture interval: ${config.captureIntervalMinutes} minutes`);
+  logger.info(`Idle threshold: ${config.idleThresholdSeconds} seconds`);
+  logger.info(`Screenshot blur: ${config.blurScreenshots ? "enabled" : "disabled"}`);
+  logger.info(`Projects configured: ${config.projects.length}`);
+  logger.plain("");
 
   // Set up idle watcher
   const idleWatcher = createIdleWatcher(config, (isIdle, idleSeconds) => {
     if (isIdle) {
-      console.log(`[${new Date().toLocaleTimeString()}] User is idle (${formatIdleTime(idleSeconds)})`);
+      logger.warning(`[${new Date().toLocaleTimeString()}] User is idle (${formatIdleTime(idleSeconds)})`);
     } else {
-      console.log(`[${new Date().toLocaleTimeString()}] User is active again`);
+      logger.info(`[${new Date().toLocaleTimeString()}] User is active again`);
     }
   });
 
@@ -144,7 +145,7 @@ async function startTracker(): Promise<void> {
   // Capture loop
   const intervalMs = config.captureIntervalMinutes * 60 * 1000;
 
-  console.log("Tracker started. Press Ctrl+C to stop.\n");
+  logger.success("Tracker started. Press Ctrl+C to stop.\n");
 
   // Initial capture
   await captureAndAnalyze(config);
@@ -156,12 +157,12 @@ async function startTracker(): Promise<void> {
 
   // Handle shutdown
   const shutdown = async () => {
-    console.log("\nStopping tracker...");
+    logger.info("\nStopping tracker...");
     clearInterval(timer);
     idleWatcher.stop();
     await updateConfig({ isRunning: false });
     closeDatabase();
-    console.log("Tracker stopped.");
+    logger.success("Tracker stopped.");
     process.exit(0);
   };
 
@@ -183,20 +184,20 @@ async function captureAndAnalyze(config: TrackerConfig): Promise<void> {
     // Check if idle
     const idleState = await checkIdleState(config);
     if (idleState.isIdle) {
-      console.log(`[${timeStr}] Skipping capture - user is idle`);
+      logger.warning(`[${timeStr}] Skipping capture - user is idle`);
       return;
     }
 
     // Get active window
     const windowInfo = await getActiveWindow();
     if (!windowInfo) {
-      console.log(`[${timeStr}] No active window detected`);
+      logger.warning(`[${timeStr}] No active window detected`);
       return;
     }
 
     // Check if excluded
     if (shouldExcludeWindow(windowInfo, config)) {
-      console.log(`[${timeStr}] Skipping excluded app: ${windowInfo.appName}`);
+      logger.warning(`[${timeStr}] Skipping excluded app: ${windowInfo.appName}`);
       return;
     }
 
@@ -209,7 +210,7 @@ async function captureAndAnalyze(config: TrackerConfig): Promise<void> {
       const screenshot = await captureScreenshot(config);
       screenshotPath = screenshot.filePath;
     } catch (error) {
-      console.warn(`[${timeStr}] Screenshot capture failed:`, error);
+      logger.warning(`[${timeStr}] Screenshot capture failed: ${error}`);
     }
 
     // Insert initial entry
@@ -226,7 +227,7 @@ async function captureAndAnalyze(config: TrackerConfig): Promise<void> {
       aiAnalysis: null,
     });
 
-    console.log(`[${timeStr}] Captured: ${windowInfo.appName} - ${windowInfo.title.substring(0, 50)}...`);
+    logger.success(`[${timeStr}] Captured: ${windowInfo.appName} - ${windowInfo.title.substring(0, 50)}...`);
 
     // Analyze with AI (async, don't block)
     analyzeTask(
@@ -242,13 +243,13 @@ async function captureAndAnalyze(config: TrackerConfig): Promise<void> {
           analysis.suggestedProjectId,
           JSON.stringify(analysis)
         );
-        console.log(`[${timeStr}] AI Analysis: ${analysis.taskDescription} (${analysis.category})`);
+        logger.info(`[${timeStr}] AI Analysis: ${analysis.taskDescription} (${analysis.category})`);
       })
       .catch((error) => {
-        console.warn(`[${timeStr}] AI analysis failed:`, error);
+        logger.warning(`[${timeStr}] AI analysis failed: ${error}`);
       });
   } catch (error) {
-    console.error(`[${timeStr}] Capture error:`, error);
+    logger.error(`[${timeStr}] Capture error: ${error}`);
   }
 }
 
@@ -259,12 +260,12 @@ async function stopTracker(): Promise<void> {
   const config = await loadConfig();
 
   if (!config.isRunning) {
-    console.log("Tracker is not running.");
+    logger.warning("Tracker is not running.");
     return;
   }
 
   await updateConfig({ isRunning: false });
-  console.log("Tracker stopped.");
+  logger.success("Tracker stopped.");
 }
 
 /**
@@ -277,16 +278,16 @@ async function showStatus(): Promise<void> {
   const todayCount = getTodayEntryCount();
   const lastEntry = getLastEntry();
 
-  console.log("WorkTimeTaskLogger Status");
-  console.log("=".repeat(40));
-  console.log(`Running: ${config.isRunning ? "Yes" : "No"}`);
-  console.log(`Capture Interval: ${config.captureIntervalMinutes} minutes`);
-  console.log(`Entries Today: ${todayCount}`);
-  console.log(`Projects: ${config.projects.length}`);
+  logger.info("WorkTimeTaskLogger Status");
+  logger.plain("=".repeat(40));
+  logger.info(`Running: ${config.isRunning ? "Yes" : "No"}`);
+  logger.info(`Capture Interval: ${config.captureIntervalMinutes} minutes`);
+  logger.info(`Entries Today: ${todayCount}`);
+  logger.info(`Projects: ${config.projects.length}`);
 
   if (lastEntry) {
-    console.log(`Last Capture: ${lastEntry.timestamp.toLocaleString()}`);
-    console.log(`Last App: ${lastEntry.appName}`);
+    logger.info(`Last Capture: ${lastEntry.timestamp.toLocaleString()}`);
+    logger.info(`Last App: ${lastEntry.appName}`);
   }
 
   closeDatabase();
@@ -315,16 +316,16 @@ async function generateReport(args: string[]): Promise<void> {
     weekStart = getWeekStart();
   }
 
-  console.log("Generating weekly report...\n");
+  logger.info("Generating weekly report...\n");
 
   const report = await generateWeeklyReport(weekStart);
-  console.log(formatWeeklyReportText(report));
+  logger.plain(formatWeeklyReportText(report));
 
   if (values.ai) {
-    console.log("\nAI Summary:");
-    console.log("-".repeat(40));
+    logger.info("\nAI Summary:");
+    logger.plain("-".repeat(40));
     const summary = await generateAISummary(report);
-    console.log(summary);
+    logger.plain(summary);
   }
 
   closeDatabase();
@@ -356,7 +357,7 @@ async function handleExport(args: string[]): Promise<void> {
   const startDate = typeof values.from === "string" ? new Date(values.from) : getWeekStart();
   const endDate = typeof values.to === "string" ? new Date(values.to) : new Date();
 
-  console.log(`Exporting ${exportType} from ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}...`);
+  logger.info(`Exporting ${exportType} from ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}...`);
 
   let content: string;
   if (exportType === "report") {
@@ -375,7 +376,7 @@ async function handleExport(args: string[]): Promise<void> {
       : generateExportFilename(startDate, endDate, format, exportType);
 
   await saveExport(content, outputPath);
-  console.log(`Exported to: ${outputPath}`);
+  logger.success(`Exported to: ${outputPath}`);
 
   closeDatabase();
 }
@@ -390,18 +391,18 @@ async function handleProjects(args: string[]): Promise<void> {
     case "list": {
       const config = await loadConfig();
       if (config.projects.length === 0) {
-        console.log("No projects configured.");
-        console.log('Use "projects add" to add a project.');
+        logger.warning("No projects configured.");
+        logger.info('Use "projects add" to add a project.');
       } else {
-        console.log("Configured Projects:");
-        console.log("-".repeat(50));
+        logger.info("Configured Projects:");
+        logger.plain("-".repeat(50));
         for (const project of config.projects) {
-          console.log(`  ${project.id}`);
-          console.log(`    Name: ${project.name}`);
-          if (project.client) console.log(`    Client: ${project.client}`);
-          console.log(`    Keywords: ${project.keywords.join(", ")}`);
-          if (project.hourlyRate) console.log(`    Rate: $${project.hourlyRate}/hr`);
-          console.log("");
+          logger.plain(`  ${project.id}`);
+          logger.plain(`    Name: ${project.name}`);
+          if (project.client) logger.plain(`    Client: ${project.client}`);
+          logger.plain(`    Keywords: ${project.keywords.join(", ")}`);
+          if (project.hourlyRate) logger.plain(`    Rate: $${project.hourlyRate}/hr`);
+          logger.plain("");
         }
       }
       break;
@@ -421,7 +422,7 @@ async function handleProjects(args: string[]): Promise<void> {
       });
 
       if (typeof values.name !== "string") {
-        console.log("Usage: projects add --name <name> [--client <client>] [--keywords <k1,k2>] [--rate <hourly>]");
+        logger.error("Usage: projects add --name <name> [--client <client>] [--keywords <k1,k2>] [--rate <hourly>]");
         return;
       }
 
@@ -435,23 +436,23 @@ async function handleProjects(args: string[]): Promise<void> {
       };
 
       await addProject(project);
-      console.log(`Added project: ${project.name} (${project.id})`);
+      logger.success(`Added project: ${project.name} (${project.id})`);
       break;
     }
 
     case "remove": {
       const projectId = args[1];
       if (!projectId) {
-        console.log("Usage: projects remove <project-id>");
+        logger.error("Usage: projects remove <project-id>");
         return;
       }
       await removeProject(projectId);
-      console.log(`Removed project: ${projectId}`);
+      logger.success(`Removed project: ${projectId}`);
       break;
     }
 
     default:
-      console.log("Unknown projects subcommand. Use: list, add, remove");
+      logger.error("Unknown projects subcommand. Use: list, add, remove");
   }
 }
 
@@ -464,22 +465,22 @@ async function handleConfig(args: string[]): Promise<void> {
   switch (subcommand) {
     case "show": {
       const config = await loadConfig();
-      console.log("Current Configuration:");
-      console.log("-".repeat(40));
-      console.log(`Capture Interval: ${config.captureIntervalMinutes} minutes`);
-      console.log(`Idle Threshold: ${config.idleThresholdSeconds} seconds`);
-      console.log(`Screenshot Directory: ${config.screenshotDir}`);
-      console.log(`Database Path: ${config.databasePath}`);
-      console.log(`Blur Screenshots: ${config.blurScreenshots}`);
-      console.log(`Blur Intensity: ${config.blurIntensity}`);
-      console.log(`Excluded Apps: ${config.excludedApps.join(", ") || "none"}`);
-      console.log("");
-      console.log("LLM Settings:");
-      console.log("-".repeat(40));
-      console.log(`Provider: ${config.llmProvider}`);
-      console.log(`Proxy URL: ${config.llmProxyUrl ?? "not set"}`);
-      console.log(`Vision Model: ${config.llmVisionModel}`);
-      console.log(`Text Model: ${config.llmTextModel}`);
+      logger.info("Current Configuration:");
+      logger.plain("-".repeat(40));
+      logger.info(`Capture Interval: ${config.captureIntervalMinutes} minutes`);
+      logger.info(`Idle Threshold: ${config.idleThresholdSeconds} seconds`);
+      logger.info(`Screenshot Directory: ${config.screenshotDir}`);
+      logger.info(`Database Path: ${config.databasePath}`);
+      logger.info(`Blur Screenshots: ${config.blurScreenshots}`);
+      logger.info(`Blur Intensity: ${config.blurIntensity}`);
+      logger.info(`Excluded Apps: ${config.excludedApps.join(", ") || "none"}`);
+      logger.plain("");
+      logger.info("LLM Settings:");
+      logger.plain("-".repeat(40));
+      logger.info(`Provider: ${config.llmProvider}`);
+      logger.info(`Proxy URL: ${config.llmProxyUrl ?? "not set"}`);
+      logger.info(`Vision Model: ${config.llmVisionModel}`);
+      logger.info(`Text Model: ${config.llmTextModel}`);
       break;
     }
 
@@ -512,29 +513,29 @@ async function handleConfig(args: string[]): Promise<void> {
 
       const errors = validateConfig(updates);
       if (errors.length > 0) {
-        console.log("Validation errors:");
-        errors.forEach((e) => console.log(`  - ${e}`));
+        logger.error("Validation errors:");
+        errors.forEach((e) => logger.error(`  - ${e}`));
         return;
       }
 
       await updateConfig(updates);
-      console.log("Configuration updated.");
+      logger.success("Configuration updated.");
       break;
     }
 
     case "exclude": {
       const appName = args[1];
       if (!appName) {
-        console.log("Usage: config exclude <app-name>");
+        logger.error("Usage: config exclude <app-name>");
         return;
       }
       const config = await loadConfig();
       if (!config.excludedApps.includes(appName)) {
         config.excludedApps.push(appName);
         await saveConfig(config);
-        console.log(`Added ${appName} to excluded apps.`);
+        logger.success(`Added ${appName} to excluded apps.`);
       } else {
-        console.log(`${appName} is already excluded.`);
+        logger.warning(`${appName} is already excluded.`);
       }
       break;
     }
@@ -542,7 +543,7 @@ async function handleConfig(args: string[]): Promise<void> {
     case "include": {
       const appName = args[1];
       if (!appName) {
-        console.log("Usage: config include <app-name>");
+        logger.error("Usage: config include <app-name>");
         return;
       }
       const config = await loadConfig();
@@ -550,9 +551,9 @@ async function handleConfig(args: string[]): Promise<void> {
       if (index !== -1) {
         config.excludedApps.splice(index, 1);
         await saveConfig(config);
-        console.log(`Removed ${appName} from excluded apps.`);
+        logger.success(`Removed ${appName} from excluded apps.`);
       } else {
-        console.log(`${appName} was not excluded.`);
+        logger.warning(`${appName} was not excluded.`);
       }
       break;
     }
@@ -575,7 +576,7 @@ async function handleConfig(args: string[]): Promise<void> {
         if (values.provider === "proxy" || values.provider === "claude-sdk") {
           updates.llmProvider = values.provider;
         } else {
-          console.log("Provider must be 'proxy' or 'claude-sdk'");
+          logger.error("Provider must be 'proxy' or 'claude-sdk'");
           return;
         }
       }
@@ -590,21 +591,21 @@ async function handleConfig(args: string[]): Promise<void> {
       }
 
       if (Object.keys(updates).length === 0) {
-        console.log("Usage: config llm [options]");
-        console.log("  -p, --provider   LLM provider: proxy or claude-sdk");
-        console.log("  -u, --url        Proxy URL (for proxy mode)");
-        console.log("  -v, --vision     Vision model name");
-        console.log("  -t, --text       Text model name");
+        logger.info("Usage: config llm [options]");
+        logger.info("  -p, --provider   LLM provider: proxy or claude-sdk");
+        logger.info("  -u, --url        Proxy URL (for proxy mode)");
+        logger.info("  -v, --vision     Vision model name");
+        logger.info("  -t, --text       Text model name");
         return;
       }
 
       await updateConfig(updates);
-      console.log("LLM configuration updated.");
+      logger.success("LLM configuration updated.");
       break;
     }
 
     default:
-      console.log("Unknown config subcommand. Use: show, set, exclude, include, llm");
+      logger.error("Unknown config subcommand. Use: show, set, exclude, include, llm");
   }
 }
 
@@ -612,7 +613,7 @@ async function handleConfig(args: string[]): Promise<void> {
  * Show help message
  */
 function showHelp(): void {
-  console.log(`
+  logger.info(`
 WorkTimeTaskLogger - AI-powered time tracking agent
 
 Usage: bun run src/index.ts <command> [options]
@@ -668,6 +669,6 @@ Examples:
 
 // Run main
 main().catch((error) => {
-  console.error("Fatal error:", error);
+  logger.error(`Fatal error: ${error}`);
   process.exit(1);
 });

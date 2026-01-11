@@ -4,6 +4,7 @@
  */
 
 import type { TrackerConfig } from "../types.ts";
+import { logger, formatError } from "../utils/logger.ts";
 
 export interface IdleState {
   /** Whether the user is currently idle */
@@ -30,7 +31,7 @@ export async function getIdleTime(): Promise<number> {
   }
 
   // Fallback: assume not idle
-  console.warn(`Idle detection not supported on platform: ${platform}`);
+  logger.warning(`Idle detection not supported on platform: ${platform}`);
   return 0;
 }
 
@@ -50,7 +51,7 @@ async function getIdleTimeMacOS(): Promise<number> {
       return Math.floor(nanoseconds / 1_000_000_000);
     }
   } catch (error) {
-    console.error("Error getting macOS idle time:", error);
+    logger.error(`Error getting macOS idle time: ${formatError(error)}`);
   }
 
   return 0;
@@ -77,7 +78,7 @@ async function getIdleTimeLinux(): Promise<number> {
         return Math.floor(milliseconds / 1000);
       }
     } catch {
-      console.warn(
+      logger.warning(
         "Linux idle detection requires xprintidle or xssstate"
       );
     }
@@ -119,7 +120,7 @@ async function getIdleTimeWindows(): Promise<number> {
       return seconds;
     }
   } catch (error) {
-    console.error("Error getting Windows idle time:", error);
+    logger.error(`Error getting Windows idle time: ${formatError(error)}`);
   }
 
   return 0;

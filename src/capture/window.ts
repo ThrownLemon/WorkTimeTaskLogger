@@ -4,6 +4,41 @@
  */
 
 import type { WindowInfo, TrackerConfig } from "../types.ts";
+import { logger, formatError } from "../utils/logger.ts";
+
+/**
+ * Simple rate limiter to prevent log spam
+ */
+const rateLimitedWarnings = new Map<string, number>();
+const CLEANUP_INTERVAL_MS = 300000; // Clean up every 5 minutes
+const MAX_ENTRY_AGE_MS = 3600000; // Remove entries older than 1 hour
+
+// Periodically clean up old entries to prevent memory leaks
+const cleanupInterval = setInterval(() => {
+  const now = Date.now();
+  for (const [key, timestamp] of rateLimitedWarnings.entries()) {
+    if (now - timestamp > MAX_ENTRY_AGE_MS) {
+      rateLimitedWarnings.delete(key);
+    }
+  }
+}, CLEANUP_INTERVAL_MS);
+
+// Ensure cleanup interval doesn't prevent process from exiting
+cleanupInterval.unref();
+
+function warnOnceOrRateLimit(
+  message: string,
+  stableKey: string,
+  windowMs: number = 60000
+): void {
+  const now = Date.now();
+  const lastWarned = rateLimitedWarnings.get(stableKey);
+
+  if (!lastWarned || now - lastWarned > windowMs) {
+    logger.warning(message);
+    rateLimitedWarnings.set(stableKey, now);
+  }
+}
 
 /**
  * Get information about the currently active window using AppleScript
@@ -40,7 +75,10 @@ export async function getActiveWindow(): Promise<WindowInfo | null> {
       pid: parseInt(parts[3] ?? "0", 10),
     };
   } catch (error) {
-    console.error("Error getting active window:", error);
+    warnOnceOrRateLimit(
+      `Error getting active window: ${formatError(error)}`,
+      "getActiveWindow"
+    );
     return null;
   }
 }

@@ -4,6 +4,7 @@
 
 import { join, dirname } from "path";
 import type { TrackerConfig, Project } from "../types.ts";
+import { logger, formatError } from "../utils/logger.ts";
 
 const DEFAULT_DATA_DIR = join(process.cwd(), "data");
 
@@ -37,7 +38,7 @@ export async function loadConfig(): Promise<TrackerConfig> {
       return { ...DEFAULT_CONFIG, ...data };
     }
   } catch (error) {
-    console.error("Error loading config, using defaults:", error);
+    logger.error(`Error loading config from ${CONFIG_FILE}, using defaults: ${formatError(error)}`);
   }
   return { ...DEFAULT_CONFIG };
 }
